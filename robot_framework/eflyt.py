@@ -54,9 +54,6 @@ def search_cases(browser: webdriver.Chrome) -> None:
     sagstilstand_select = Select(browser.find_element(By.ID, "ctl00_ContentPlaceHolder1_SearchControl_ddlTilstand"))
     sagstilstand_select.select_by_visible_text("Ubehandlet")
 
-    # status_select = Select(browser.find_element(By.ID, "ctl00_ContentPlaceHolder1_SearchControl_ddlSagstype"))
-    # status_select.select_by_visible_text("Logivært")
-
     search_date = date.today().strftime("%d%m%Y")
     date_input = browser.find_element(By.ID, "ctl00_ContentPlaceHolder1_SearchControl_txtFlytteEndDato")
     date_input.send_keys(search_date)
@@ -101,7 +98,7 @@ def extract_cases(browser: webdriver.Chrome) -> list[str]:
     return cases
 
 
-def handle_case(browser: webdriver.Chrome, case_number: str, orchestrator_connection: OrchestratorConnection) -> None:
+def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: list[str], orchestrator_connection: OrchestratorConnection) -> None:
     """Handle a single case with all steps included.
 
     Args:
@@ -119,6 +116,11 @@ def handle_case(browser: webdriver.Chrome, case_number: str, orchestrator_connec
     orchestrator_connection.log_info(f"Beginning case: {case_number}")
 
     open_case(browser, case_number)
+
+    # Check if address has been handled earlier in the run
+    if check_address(browser, prev_addresses):
+        orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Duplikeret adresse")
+        return
 
     beboer_count = count_beboere(browser)
 
@@ -240,18 +242,16 @@ def approve_case(browser: webdriver.Chrome):
     change_tab(browser, 0)
 
     # Set note
-    text_field = browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_ncPersonTab_txtDeadlineNote")
-    text_field.clear()
-    text_field.send_keys("Automatisk godkendt")
-
-    # Click 'Gem'
-    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_ncPersonTab_btnDeadline").click()
+    create_note(browser, f"{date.today()} Besked fra Robot: Automatisk godkendt.")
 
     # Click 'Godkend'
     browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_btnGodkend").click()
 
-    # Click 'OK'
+    # Click 'OK' in popup
     browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_btnApproveYes").click()
+
+    # Click 'Godkend' personer
+    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_btnGodkendAlle").click()
 
 
 def get_age(cpr: str) -> int:
@@ -303,3 +303,35 @@ def change_tab(browser: webdriver.Chrome, tab_index: int):
         tab_index: The zero-based index of the tab to select.
     """
     browser.execute_script(f"__doPostBack('ctl00$ContentPlaceHolder2$ptFanePerson$ImgJournalMap','{tab_index}')")
+
+
+def create_note(browser: webdriver.Chrome, note_text: str):
+    """Create a note on the case."""
+    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_ncPersonTab_ButtonVisOpdater").click()
+
+    text_area = browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_ncPersonTab_txtVisOpdaterNote")
+
+    text_area.send_keys(note_text)
+    text_area.send_keys("\n\n")
+
+    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_ncPersonTab_btnLongNoteUpdater").click()
+
+
+def check_address(browser: webdriver.Chrome, prev_addresses: list[str]) -> bool:
+    """Check if the "to" address has been handled in another case in this run.
+    Also add the address to the list of handled addresses.
+
+    Args:
+        browser: The webdriver browser object.
+        prev_addresses: A list of previously handled addresses.
+
+    Returns:
+        True if the address is on the list and the case should be skipped.
+    """
+    address = browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_lblTiltxt").text
+
+    if address in prev_addresses:
+        return True
+
+    prev_addresses.append(address)
+    return False

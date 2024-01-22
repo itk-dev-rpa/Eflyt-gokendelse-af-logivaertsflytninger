@@ -7,7 +7,7 @@ from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConn
 from robot_framework import eflyt
 
 
-def process(orchestrator_connection: OrchestratorConnection) -> None:
+def process(prev_addresses: list[str], orchestrator_connection: OrchestratorConnection) -> None:
     """Do the primary process of the robot."""
     orchestrator_connection.log_trace("Running process.")
 
@@ -17,11 +17,11 @@ def process(orchestrator_connection: OrchestratorConnection) -> None:
     cases = eflyt.extract_cases(browser)
 
     for case_number in cases:
-        eflyt.handle_case(browser, case_number, orchestrator_connection)
+        eflyt.handle_case(browser, case_number, prev_addresses, orchestrator_connection)
 
 
 if __name__ == '__main__':
     conn_string = os.getenv("OpenOrchestratorConnString")
     crypto_key = os.getenv("OpenOrchestratorKey")
     oc = OrchestratorConnection("Eflyt Test", conn_string, crypto_key, "")
-    process(oc)
+    process([], oc)

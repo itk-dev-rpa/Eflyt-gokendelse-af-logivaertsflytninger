@@ -20,13 +20,13 @@ def main():
     sys.excepthook = log_exception(orchestrator_connection)
 
     orchestrator_connection.log_trace("Robot Framework started.")
-    initialize.initialize(orchestrator_connection)
+    prev_addresses = initialize.initialize(orchestrator_connection)
 
     error_count = 0
     for _ in range(config.MAX_RETRY_COUNT):
         try:
             reset.reset(orchestrator_connection)
-            process.process(orchestrator_connection)
+            process.process(prev_addresses, orchestrator_connection)
             break
 
         # If any business rules are broken the robot should stop entirely.

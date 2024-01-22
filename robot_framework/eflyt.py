@@ -1,3 +1,4 @@
+"""This module handles all logic related to the Eflyt system."""
 
 from datetime import date
 

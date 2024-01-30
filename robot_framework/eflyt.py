@@ -257,24 +257,47 @@ def approve_case(browser: webdriver.Chrome):
 
 def get_age(cpr: str) -> int:
     """Get the age of a person based on their cpr number
-    assuming they are between 0-99 years old.
+    using the 7th digit to infer the century.
 
     Args:
-        cpr: The cpr number in the format 'ddmmyy-xxxx' or 'ddmmyyxxxx'.
+        cpr: The cpr number in the format 'ddmmyyxxxx'.
 
     Returns:
         The age based on the cpr number.
     """
+    # A dictionary mapping from a year (0-99) and control digit (0-9) to a century.
+    # https://cpr.dk/media/12066/personnummeret-i-cpr.pdf
+    # The keys of the dict corespond to the control digit.
+    # The first value of the tuples is the cutoff year. If the input year is equal to or below the first value
+    # the first century is used. If the year is above the first value, the second century is used.
+    # E.g. If the control is 4 and the year is smaller or equal to 36 -> 2000-2036
+    # E.g. If the control is 7 and the year is larger than 57 -> 1858-1899
+    cpr_reg = {
+        0: (99, 1900, '-'),
+        1: (99, 1900, '-'),
+        2: (99, 1900, '-'),
+        3: (99, 1900, '-'),
+        4: (36, 2000, 1900),
+        5: (57, 2000, 1800),
+        6: (57, 2000, 1800),
+        7: (57, 2000, 1800),
+        8: (57, 2000, 1800),
+        9: (36, 2000, 1900),
+    }
+
     day = int(cpr[0:2])
     month = int(cpr[2:4])
-    year = int(cpr[4:6]) + 2000
+    year = int(cpr[4:6])
+    control = int(cpr[6])
+
+    t = cpr_reg[control]
+    if year <= t[0]:
+        year += t[1]
+    else:
+        year += t[2]
 
     birthdate = date(year, month, day)
     current_date = date.today()
-
-    # If the birthdate is in the future revert it back 100 years
-    if birthdate > current_date:
-        birthdate = date(year-100, month, day)
 
     age = current_date.year - birthdate.year - ((current_date.month, current_date.day) < (birthdate.month, birthdate.day))
 

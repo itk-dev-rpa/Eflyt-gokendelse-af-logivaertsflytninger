@@ -268,10 +268,10 @@ def get_age(cpr: str) -> int:
     # A dictionary mapping from a year (0-99) and control digit (0-9) to a century.
     # https://cpr.dk/media/12066/personnummeret-i-cpr.pdf
     # The keys of the dict corespond to the control digit.
-    # The first value of the tuples is the cutoff year. If the input year is equal to or below the first value
-    # the first century is used. If the year is above the first value, the second century is used.
-    # E.g. If the control is 4 and the year is smaller or equal to 36 -> 2000-2036
-    # E.g. If the control is 7 and the year is larger than 57 -> 1858-1899
+    # The first value of the tuples is the cutoff year. If the input year is less than or equal to the first value
+    # the first century is used. If the year is greater than the first value, the second century is used.
+    # E.g. If the control is 4 and the year is less than or equal to 36 -> 2000-2036
+    # E.g. If the control is 7 and the year is greater than 57 -> 1858-1899
     cpr_reg = {
         0: (99, 1900, '-'),
         1: (99, 1900, '-'),

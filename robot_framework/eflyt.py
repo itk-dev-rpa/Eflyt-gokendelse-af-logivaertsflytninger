@@ -134,8 +134,8 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
 
     applicants = get_applicants(browser)
 
-    # Check if any applicant is older than 18
-    if all(cpr_util.get_age(cpr) <= 18 for cpr in applicants):
+    # Check if all applicants are younger than 19
+    if all(cpr_util.get_age(cpr) < 19 for cpr in applicants):
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Ingen ansøgere over 18.")
         return
 

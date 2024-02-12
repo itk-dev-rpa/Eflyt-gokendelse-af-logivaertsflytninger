@@ -7,6 +7,7 @@ from OpenOrchestrator.database.queues import QueueStatus
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support.select import Select
+from itk_dev_shared_components.misc import cpr_util
 
 from robot_framework import config
 
@@ -133,6 +134,11 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
 
     applicants = get_applicants(browser)
 
+    # Check if any applicant is older than 18
+    if all(cpr_util.get_age(cpr) <= 18 for cpr in applicants):
+        orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Ingen ansøgere over 18.")
+        return
+
     if room_count >= len(applicants):
         approve_case(browser)
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
@@ -140,7 +146,7 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
 
     # Check for parent+child in 1 room
     if room_count == 1 and len(applicants) == 2:
-        is_child = any(get_age(cpr) < 15 for cpr in applicants)
+        is_child = any(cpr_util.get_age(cpr) < 15 for cpr in applicants)
         if is_child:
             approve_case(browser)
             orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
@@ -253,55 +259,6 @@ def approve_case(browser: webdriver.Chrome):
 
     # Click 'Godkend' personer
     browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_btnGodkendAlle").click()
-
-
-def get_age(cpr: str) -> int:
-    """Get the age of a person based on their cpr number
-    using the 7th digit to infer the century.
-
-    Args:
-        cpr: The cpr number in the format 'ddmmyyxxxx'.
-
-    Returns:
-        The age based on the cpr number.
-    """
-    # A dictionary mapping from a year (0-99) and control digit (0-9) to a century.
-    # https://cpr.dk/media/12066/personnummeret-i-cpr.pdf
-    # The keys of the dict corespond to the control digit.
-    # The first value of the tuples is the cutoff year. If the input year is less than or equal to the first value
-    # the first century is used. If the year is greater than the first value, the second century is used.
-    # E.g. If the control is 4 and the year is less than or equal to 36 -> 2000-2036
-    # E.g. If the control is 7 and the year is greater than 57 -> 1858-1899
-    cpr_reg = {
-        0: (99, 1900, '-'),
-        1: (99, 1900, '-'),
-        2: (99, 1900, '-'),
-        3: (99, 1900, '-'),
-        4: (36, 2000, 1900),
-        5: (57, 2000, 1800),
-        6: (57, 2000, 1800),
-        7: (57, 2000, 1800),
-        8: (57, 2000, 1800),
-        9: (36, 2000, 1900),
-    }
-
-    day = int(cpr[0:2])
-    month = int(cpr[2:4])
-    year = int(cpr[4:6])
-    control = int(cpr[6])
-
-    t = cpr_reg[control]
-    if year <= t[0]:
-        year += t[1]
-    else:
-        year += t[2]
-
-    birthdate = date(year, month, day)
-    current_date = date.today()
-
-    age = current_date.year - birthdate.year - ((current_date.month, current_date.day) < (birthdate.month, birthdate.day))
-
-    return age
 
 
 def open_case(browser: webdriver.Chrome, case_number: str):

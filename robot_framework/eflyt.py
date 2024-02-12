@@ -146,8 +146,7 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
 
     # Check for parent+child in 1 room
     if room_count == 1 and len(applicants) == 2:
-        is_child = any(cpr_util.get_age(cpr) < 15 for cpr in applicants)
-        if is_child:
+        if any(cpr_util.get_age(cpr) < 15 for cpr in applicants):
             approve_case(browser)
             orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
             return

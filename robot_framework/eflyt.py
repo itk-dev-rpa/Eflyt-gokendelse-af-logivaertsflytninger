@@ -234,6 +234,7 @@ def get_applicants(browser: webdriver.Chrome) -> list[str]:
 
     for row in rows:
         cpr = row.find_element(By.XPATH, "td[2]/a[2]").text
+        cpr = cpr.replace("-", "")
         cpr_list.append(cpr)
 
     return cpr_list

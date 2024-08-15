@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.0] - 2024-08-15
+
+### Changed
+
+ - Implemented Eflyt module from Shared Components
+
 ## [1.1.1] - 2024-02-13
 
 ### Fixed
@@ -27,7 +33,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased] https://github.com/itk-dev-rpa/ITK-dev-shared-components/compare/1.1.1...HEAD
+[Unreleased] https://github.com/itk-dev-rpa/ITK-dev-shared-components/compare/1.2.0...HEAD
+[1.2.0] https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.2.0
 [1.1.1] https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.1.1
 [1.1.0] https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.1.0
 [1.0.0] https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.0.0

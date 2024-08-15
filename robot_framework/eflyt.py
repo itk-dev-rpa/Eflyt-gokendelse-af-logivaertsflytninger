@@ -6,98 +6,34 @@ from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConn
 from OpenOrchestrator.database.queues import QueueStatus
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.support.select import Select
 from itk_dev_shared_components.misc import cpr_util
+from itk_dev_shared_components.eflyt import eflyt_case, eflyt_search
+from itk_dev_shared_components.eflyt.eflyt_case import Case
 
 from robot_framework import config
 
 
-ALLOWED_CASE_TYPES = (
-    "Logivært",
-    "Boligselskab",
-    "For sent anmeldt"
-)
-
-
-def login(orchestrator_connection: OrchestratorConnection) -> webdriver.Chrome:
-    """Opens a browser and logs in to Eflyt.
+def filter_cases(cases: list[Case]) -> list[Case]:
+    """Filter cases on case types and return filtered list.
 
     Args:
-        orchestrator_connection: The connection to Orchestrator.
+        cases: List of cases
 
-    Returns:
-        A selenium browser object.
+    Return:
+        List of filtered cases
     """
-    eflyt_creds = orchestrator_connection.get_credential(config.EFLYT_CREDS)
+    allowed_case_types = (
+        "Logivært",
+        "Boligselskab",
+        "For sent anmeldt"
+    )
 
-    browser = webdriver.Chrome()
-    browser.maximize_window()
-    browser.get("https://notuskommunal.scandihealth.net/")
+    filtered_cases = [
+        case for case in cases
+        if any(case_type in allowed_case_types for case_type in case.case_types)
+    ]
 
-    user_field = browser.find_element(By.ID, "Login1_UserName")
-    user_field.send_keys(eflyt_creds.username)
-
-    pass_field = browser.find_element(By.ID, "Login1_Password")
-    pass_field.send_keys(eflyt_creds.password)
-
-    browser.find_element(By.ID, "Login1_LoginImageButton").click()
-
-    browser.get("https://notuskommunal.scandihealth.net/web/SearchResulteFlyt.aspx")
-
-    return browser
-
-
-def search_cases(browser: webdriver.Chrome) -> None:
-    """Apply the correct filters in Eflyt and search the case list.
-
-    Args:
-        browser: The webdriver browser object.
-    """
-    sagstilstand_select = Select(browser.find_element(By.ID, "ctl00_ContentPlaceHolder1_SearchControl_ddlTilstand"))
-    sagstilstand_select.select_by_visible_text("Ubehandlet")
-
-    search_date = date.today().strftime("%d%m%Y")
-    date_input = browser.find_element(By.ID, "ctl00_ContentPlaceHolder1_SearchControl_txtFlytteEndDato")
-    date_input.send_keys(search_date)
-
-    search_button = browser.find_element(By.ID, "ctl00_ContentPlaceHolder1_SearchControl_btnSearch")
-    search_button.click()
-
-
-def extract_cases(browser: webdriver.Chrome) -> list[str]:
-    """Extract and filter cases from the case table.
-
-    Args:
-        browser: The webdriver browser object.
-
-    Returns:
-        A list of filtered case objects.
-    """
-    table = browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_GridViewSearchResult")
-    rows = table.find_elements(By.TAG_NAME, "tr")
-
-    # remove header row
-    rows.pop(0)
-
-    cases = []
-    for row in rows:
-        case_number = row.find_element(By.XPATH, "td[4]").text
-        case_types_text = row.find_element(By.XPATH, "td[5]").text
-
-        # If the case types ends with '...' we need to get the title instead
-        if case_types_text.endswith("..."):
-            case_types_text = row.find_element(By.XPATH, "td[5]").get_attribute("Title")
-
-        case_types = case_types_text.split(", ")
-
-        # Check if there are any case types other than the allowed ones
-        for case_type in case_types:
-            if case_type not in ALLOWED_CASE_TYPES:
-                break
-        else:
-            cases.append(case_number)
-
-    return cases
+    return filtered_cases
 
 
 def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: list[str], orchestrator_connection: OrchestratorConnection) -> None:
@@ -117,25 +53,25 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
 
     orchestrator_connection.log_info(f"Beginning case: {case_number}")
 
-    open_case(browser, case_number)
+    eflyt_search.open_case(browser, case_number)
 
     # Check if address has been handled earlier in the run
     if check_address(browser, prev_addresses):
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Duplikeret adresse")
         return
 
-    beboer_count = count_beboere(browser)
+    beboer_count = len(eflyt_case.get_beboere(browser))
 
     if beboer_count != 0:
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Beboere på adressen")
         return
 
-    room_count = get_room_count(browser)
+    room_count = eflyt_case.get_room_count(browser)
 
-    applicants = get_applicants(browser)
+    applicants = eflyt_case.get_applicants(browser)
 
     # Check if all applicants are younger than 19
-    if all(cpr_util.get_age(cpr) < 19 for cpr in applicants):
+    if all(cpr_util.get_age(applicant.cpr) < 19 for applicant in applicants):
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Ingen ansøgere over 18.")
         return
 
@@ -146,7 +82,7 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
 
     # Check for parent+child in 1 room
     if room_count == 1 and len(applicants) == 2:
-        if any(cpr_util.get_age(cpr) < 15 for cpr in applicants):
+        if any(cpr_util.get_age(applicant.cpr) < 15 for applicant in applicants):
             approve_case(browser)
             orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
             return
@@ -158,7 +94,7 @@ def check_queue(case_number: str, orchestrator_connection: OrchestratorConnectio
     """Check if a case has been handled before by checking the job queue in Orchestrator.
 
     Args:
-        case: The case to check.
+        case: The case number to check.
         orchestrator_connection: The connection to Orchestrator.
 
     Return:
@@ -182,71 +118,13 @@ def check_queue(case_number: str, orchestrator_connection: OrchestratorConnectio
     return True
 
 
-def count_beboere(browser: webdriver.Chrome) -> int:
-    """Count the number of beboere living on the address.
-
-    Args:
-        browser: The webdriver browser object.
-
-    Returns:
-        The number of beboere on the address.
-    """
-    change_tab(browser, 1)
-    beboer_table = browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_becPersonTab_GridViewBeboere")
-    rows = beboer_table.find_elements(By.TAG_NAME, "tr")
-
-    # Remove header
-    rows.pop(0)
-
-    return len(rows)
-
-
-def get_room_count(browser: webdriver.Chrome) -> int:
-    """Get the number of rooms on the address.
-
-    Args:
-        browser: The webdriver browser object.
-
-    Returns:
-        The number of rooms on the address.
-    """
-    area_room_text = browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab6_lblAreaText").text
-    room_text = area_room_text.split("/")[1]
-    return int(room_text)
-
-
-def get_applicants(browser: webdriver.Chrome) -> list[str]:
-    """Get a list of applicants' cpr numbers from the applicant table.
-
-    Args:
-        browser: The webdriver browser object.
-
-    Returns:
-        A list of cpr numbers.
-    """
-    table = browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_GridViewMovingPersons")
-    rows = table.find_elements(By.TAG_NAME, "tr")
-
-    # Remove header row
-    rows.pop(0)
-
-    cpr_list = []
-
-    for row in rows:
-        cpr = row.find_element(By.XPATH, "td[2]/a[2]").text
-        cpr = cpr.replace("-", "")
-        cpr_list.append(cpr)
-
-    return cpr_list
-
-
 def approve_case(browser: webdriver.Chrome):
     """Approve the case and add a note about it.
 
     Args:
         browser: _description_
     """
-    change_tab(browser, 0)
+    eflyt_case.change_tab(browser, 0)
 
     # Set note
     create_note(browser, f"{date.today()} Besked fra Robot: Automatisk godkendt.")
@@ -259,31 +137,6 @@ def approve_case(browser: webdriver.Chrome):
 
     # Click 'Godkend' personer
     browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_btnGodkendAlle").click()
-
-
-def open_case(browser: webdriver.Chrome, case_number: str):
-    """Open a case by searching for its case number.
-
-    Args:
-        browser: The webdriver browser object.
-        case: The case to open.
-    """
-    # The id for both the search field and search button changes based on the current view hence the weird selectors.
-    case_input = browser.find_element(By.XPATH, '//input[contains(@id, "earchControl_txtSagNr")]')
-    case_input.clear()
-    case_input.send_keys(case_number)
-
-    browser.find_element(By.XPATH, '//input[contains(@id, "earchControl_btnSearch")]').click()
-
-
-def change_tab(browser: webdriver.Chrome, tab_index: int):
-    """Change the tab in the case view e.g. 'Sagslog', 'Breve'.
-
-    Args:
-        browser: The webdriver browser object.
-        tab_index: The zero-based index of the tab to select.
-    """
-    browser.execute_script(f"__doPostBack('ctl00$ContentPlaceHolder2$ptFanePerson$ImgJournalMap','{tab_index}')")
 
 
 def create_note(browser: webdriver.Chrome, note_text: str):

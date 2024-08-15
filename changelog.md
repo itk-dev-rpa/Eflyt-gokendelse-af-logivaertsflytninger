@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Changed
+
  - Implemented Eflyt module from Shared Components
 
 ## [1.1.1] - 2024-02-13

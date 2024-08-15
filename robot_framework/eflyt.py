@@ -7,8 +7,8 @@ from OpenOrchestrator.database.queues import QueueStatus
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from itk_dev_shared_components.misc import cpr_util
-from itk_dev_shared_components.eflyt.eflyt_case import Case, change_tab, get_beboere, get_room_count, get_applicants
-from itk_dev_shared_components.eflyt.eflyt_search import open_case
+from itk_dev_shared_components.eflyt import eflyt_case, eflyt_search
+from itk_dev_shared_components.eflyt.eflyt_case import Case
 
 from robot_framework import config
 
@@ -53,22 +53,22 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
 
     orchestrator_connection.log_info(f"Beginning case: {case_number}")
 
-    open_case(browser, case_number)
+    eflyt_search.open_case(browser, case_number)
 
     # Check if address has been handled earlier in the run
     if check_address(browser, prev_addresses):
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Duplikeret adresse")
         return
 
-    beboer_count = len(get_beboere(browser))
+    beboer_count = len(eflyt_case.get_beboere(browser))
 
     if beboer_count != 0:
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Beboere på adressen")
         return
 
-    room_count = get_room_count(browser)
+    room_count = eflyt_case.get_room_count(browser)
 
-    applicants = get_applicants(browser)
+    applicants = eflyt_case.get_applicants(browser)
 
     # Check if all applicants are younger than 19
     if all(cpr_util.get_age(applicant.cpr) < 19 for applicant in applicants):
@@ -124,7 +124,7 @@ def approve_case(browser: webdriver.Chrome):
     Args:
         browser: _description_
     """
-    change_tab(browser, 0)
+    eflyt_case.change_tab(browser, 0)
 
     # Set note
     create_note(browser, f"{date.today()} Besked fra Robot: Automatisk godkendt.")

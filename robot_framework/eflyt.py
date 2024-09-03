@@ -30,7 +30,7 @@ def filter_cases(cases: list[Case]) -> list[Case]:
 
     filtered_cases = [
         case for case in cases
-        if any(case_type in allowed_case_types for case_type in case.case_types)
+        if all(case_type in allowed_case_types for case_type in case.case_types)
     ]
 
     return filtered_cases

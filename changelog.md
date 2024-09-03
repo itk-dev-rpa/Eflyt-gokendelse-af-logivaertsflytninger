@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [1.2.1] - 2024-09-03
+
+### Fixed
+
+- Filtering of cases now excludes cases that have other types than the ones specified
+
 ## [1.2.0] - 2024-08-15
 
 ### Changed
@@ -33,8 +39,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Initial release
 
-[Unreleased] https://github.com/itk-dev-rpa/ITK-dev-shared-components/compare/1.2.0...HEAD
-[1.2.0] https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.2.0
-[1.1.1] https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.1.1
-[1.1.0] https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.1.0
-[1.0.0] https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.0.0
+[Unreleased]: https://github.com/itk-dev-rpa/ITK-dev-shared-components/compare/1.2.1...HEAD
+[1.2.0]: https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.2.1
+[1.2.0]: https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.2.0
+[1.1.1]: https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.1.1
+[1.1.0]: https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.1.0
+[1.0.0]: https://github.com/itk-dev-rpa/Eflyt-gokendelse-af-logivaertsflytninger/releases/tag/1.0.0

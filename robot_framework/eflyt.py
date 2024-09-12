@@ -1,7 +1,5 @@
 """This module handles all logic related to the Eflyt system."""
 
-from datetime import date
-
 from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConnection
 from OpenOrchestrator.database.queues import QueueStatus
 from selenium import webdriver
@@ -76,14 +74,14 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
         return
 
     if room_count >= len(applicants):
-        approve_case(browser)
+        eflyt_case.approve_case(browser)
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
         return
 
     # Check for parent+child in 1 room
     if room_count == 1 and len(applicants) == 2:
         if any(cpr_util.get_age(applicant.cpr) < 15 for applicant in applicants):
-            approve_case(browser)
+            eflyt_case.approve_case(browser)
             orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
             return
 
@@ -116,27 +114,6 @@ def check_queue(case_number: str, orchestrator_connection: OrchestratorConnectio
         return False
 
     return True
-
-
-def approve_case(browser: webdriver.Chrome):
-    """Approve the case and add a note about it.
-
-    Args:
-        browser: _description_
-    """
-    eflyt_case.change_tab(browser, 0)
-
-    # Set note
-    create_note(browser, f"{date.today()} Besked fra Robot: Automatisk godkendt.")
-
-    # Click 'Godkend'
-    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_btnGodkend").click()
-
-    # Click 'OK' in popup
-    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_btnApproveYes").click()
-
-    # Click 'Godkend' personer
-    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_stcPersonTab1_btnGodkendAlle").click()
 
 
 def create_note(browser: webdriver.Chrome, note_text: str):

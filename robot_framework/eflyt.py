@@ -75,6 +75,7 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
 
     if room_count >= len(applicants):
         eflyt_case.approve_case(browser)
+        eflyt_case.add_note(browser, "Automatisk godkendt.")
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
         return
 
@@ -82,6 +83,7 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
     if room_count == 1 and len(applicants) == 2:
         if any(cpr_util.get_age(applicant.cpr) < 15 for applicant in applicants):
             eflyt_case.approve_case(browser)
+            eflyt_case.add_note(browser, "Automatisk godkendt.")
             orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
             return
 
@@ -114,18 +116,6 @@ def check_queue(case_number: str, orchestrator_connection: OrchestratorConnectio
         return False
 
     return True
-
-
-def create_note(browser: webdriver.Chrome, note_text: str):
-    """Create a note on the case."""
-    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_ncPersonTab_ButtonVisOpdater").click()
-
-    text_area = browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_ncPersonTab_txtVisOpdaterNote")
-
-    text_area.send_keys(note_text)
-    text_area.send_keys("\n\n")
-
-    browser.find_element(By.ID, "ctl00_ContentPlaceHolder2_ptFanePerson_ncPersonTab_btnLongNoteUpdater").click()
 
 
 def check_address(browser: webdriver.Chrome, prev_addresses: list[str]) -> bool:

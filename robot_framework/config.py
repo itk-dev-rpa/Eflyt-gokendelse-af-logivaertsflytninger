@@ -13,6 +13,6 @@ SCREENSHOT_SENDER = "robot@friend.dk"
 
 # Constant/Credential names
 ERROR_EMAIL = "Error Email"
-EFLYT_CREDS = "Eflyt"
+EFLYT_CREDS = "Eflyt3"
 
 QUEUE_NAME = "Eflyt godkendelse af logiværtsflytninger"

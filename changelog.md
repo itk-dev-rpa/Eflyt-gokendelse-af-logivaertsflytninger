@@ -11,7 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
-- Missing github glow check files added
+- Missing github flow check files added
 
 ## [1.3.0] - 2024-09-16
 

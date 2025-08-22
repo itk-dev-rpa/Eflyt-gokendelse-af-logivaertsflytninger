@@ -14,10 +14,10 @@ from robot_framework import config
 
 
 class CaseResult(Enum):
+    """An enum describing case handling results."""
     APPROVED = auto()
     NOT_APPROVED = auto()
     SKIPPED = auto()
-
 
 
 def filter_cases(cases: list[Case]) -> list[Case]:
@@ -43,6 +43,7 @@ def filter_cases(cases: list[Case]) -> list[Case]:
     return filtered_cases
 
 
+# pylint: disable=too-many-return-statements
 def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: list[str], orchestrator_connection: OrchestratorConnection) -> CaseResult:
     """Handle a single case with all steps included.
 

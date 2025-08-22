@@ -14,8 +14,8 @@ def process(prev_addresses: list[str], orchestrator_connection: OrchestratorConn
     """Do the primary process of the robot."""
     orchestrator_connection.log_trace("Running process.")
 
-    event_log_conn_String = orchestrator_connection.get_constant(config.EVENT_LOG)
-    itk_dev_event_log.setup_logging(event_log_conn_String.value)
+    event_log_conn_string = orchestrator_connection.get_constant(config.EVENT_LOG)
+    itk_dev_event_log.setup_logging(event_log_conn_string.value)
 
     credentials = orchestrator_connection.get_credential(config.EFLYT_CREDS)
     browser = eflyt_login.login(credentials.username, credentials.password)

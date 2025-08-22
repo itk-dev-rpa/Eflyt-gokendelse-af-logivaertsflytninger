@@ -1,5 +1,7 @@
 """This module handles all logic related to the Eflyt system."""
 
+from enum import Enum, auto
+
 from OpenOrchestrator.orchestrator_connection.connection import OrchestratorConnection
 from OpenOrchestrator.database.queues import QueueStatus
 from selenium import webdriver
@@ -9,6 +11,13 @@ from itk_dev_shared_components.eflyt import eflyt_case, eflyt_search
 from itk_dev_shared_components.eflyt.eflyt_case import Case
 
 from robot_framework import config
+
+
+class CaseResult(Enum):
+    APPROVED = auto()
+    NOT_APPROVED = auto()
+    SKIPPED = auto()
+
 
 
 def filter_cases(cases: list[Case]) -> list[Case]:
@@ -34,16 +43,19 @@ def filter_cases(cases: list[Case]) -> list[Case]:
     return filtered_cases
 
 
-def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: list[str], orchestrator_connection: OrchestratorConnection) -> None:
+def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: list[str], orchestrator_connection: OrchestratorConnection) -> CaseResult:
     """Handle a single case with all steps included.
 
     Args:
         browser: The webdriver browser object.
         case: The case to handle.
         orchestrator_connection: The connection to Orchestrator.
+
+    Returns:
+        A CaseResult value describing the result.
     """
     if not check_queue(case_number, orchestrator_connection):
-        return
+        return CaseResult.SKIPPED
 
     # Create a queue element to indicate the case is being handled
     queue_element = orchestrator_connection.create_queue_element(config.QUEUE_NAME, reference=case_number)
@@ -56,28 +68,27 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
     # Check if address has been handled earlier in the run
     if check_address(browser, prev_addresses):
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Duplikeret adresse")
-        return
+        return CaseResult.NOT_APPROVED
 
     beboer_count = len(eflyt_case.get_beboere(browser))
 
     if beboer_count != 0:
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Beboere på adressen")
-        return
+        return CaseResult.NOT_APPROVED
 
     room_count = eflyt_case.get_room_count(browser)
-
     applicants = eflyt_case.get_applicants(browser)
 
     # Check if all applicants are younger than 19
     if all(cpr_util.get_age(applicant.cpr) < 19 for applicant in applicants):
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Ingen ansøgere over 18.")
-        return
+        return CaseResult.NOT_APPROVED
 
     if room_count >= len(applicants):
         eflyt_case.approve_case(browser)
         eflyt_case.add_note(browser, "Automatisk godkendt.")
         orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
-        return
+        return CaseResult.APPROVED
 
     # Check for parent+child in 1 room
     if room_count == 1 and len(applicants) == 2:
@@ -85,9 +96,10 @@ def handle_case(browser: webdriver.Chrome, case_number: str, prev_addresses: lis
             eflyt_case.approve_case(browser)
             eflyt_case.add_note(browser, "Automatisk godkendt.")
             orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sag godkendt.")
-            return
+            return CaseResult.APPROVED
 
     orchestrator_connection.set_queue_element_status(queue_element.id, QueueStatus.DONE, message="Sprunget over: Flere ansøgere end rum.")
+    return CaseResult.NOT_APPROVED
 
 
 def check_queue(case_number: str, orchestrator_connection: OrchestratorConnection) -> bool:

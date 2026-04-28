@@ -30,10 +30,3 @@ def process(prev_addresses: list[str], orchestrator_connection: OrchestratorConn
             itk_dev_event_log.emit("Eflyt godkendelse af logiværtsflytninger", "Sag godkendt")
         elif result == eflyt.CaseResult.NOT_APPROVED:
             itk_dev_event_log.emit("Eflyt godkendelse af logiværtsflytninger", "Sag sprunget over")
-
-
-if __name__ == '__main__':
-    conn_string = os.getenv("OpenOrchestratorConnString")
-    crypto_key = os.getenv("OpenOrchestratorKey")
-    oc = OrchestratorConnection("Eflyt Test", conn_string, crypto_key, "", "", "")
-    process([], oc)
